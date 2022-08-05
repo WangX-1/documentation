@@ -1,0 +1,30 @@
+Subject: [PATCH 2/2] PCI: Don't fail BAR resize if nothing is reassigned
+Date: Wed, 15 Dec 2021 15:16:26 +0100	[thread overview]
+Message-ID: <20211215141626.3090807-3-michal.winiarski@intel.com> (raw)
+In-Reply-To: <20211215141626.3090807-1-michal.winiarski@intel.com>
+
+When pci_reassign_bridge_resources returns -ENOENT, it means that no
+resources needed to be "moved". This can happen when the resource was
+resized to be smaller, and it's completely fine - there's no need to treat
+this as an error and go back to the original BAR size.
+
+Signed-off-by: Michal Winiarski <michal.winiarski@intel.com>
+---
+ drivers/pci/setup-res.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/setup-res.c b/drivers/pci/setup-res.c
+index 1946e52e7678a..5de5129055e0a 100644
+--- a/drivers/pci/setup-res.c
++++ b/drivers/pci/setup-res.c
+@@ -484,7 +484,7 @@ int pci_resize_resource(struct pci_dev *dev, int resno, int size)
+ 	/* Check if the new config works by trying to assign everything. */
+ 	if (dev->bus->self) {
+ 		ret = pci_reassign_bridge_resources(dev->bus->self, res->flags);
+-		if (ret)
++		if (ret && ret != -ENOENT)
+ 			goto error_resize;
+ 	}
+ 	return 0;
+-- 
+2.34.0
